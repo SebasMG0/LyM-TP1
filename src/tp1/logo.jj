@@ -1,0 +1,270 @@
+/**
+ * JavaCC template file created by SF JavaCC plugin 1.5.28+ wizard for JavaCC 1.5.0+
+ */
+options
+{
+  static = true;
+  ignore_case= true;
+} 
+
+PARSER_BEGIN(logo)
+package tp1;
+import java.util.*;
+
+public class logo
+{
+  private static HashMap <String, HashSet< String>> methodVars = new HashMap<>();
+  private static List < String > vars= new ArrayList<>(); 
+
+  static void defineVar(String varName) {
+		vars.add(varName);
+    }
+
+  static boolean isVarDefined(String varName) {
+    return vars.contains(varName);
+  }
+  
+  static void defineMethod(String methodName) {
+		methodVars.put(methodName, new HashSet <String >());
+    }
+
+  static boolean isMethodDefined(String methodName) {
+    return methodVars.containsKey(methodName);
+  }
+
+  static void addMethodVar(String methodName, String varName) {
+    methodVars.get(methodName).add(varName); 
+  }
+
+  static HashSet getMethodVars(String methodName) {
+    return methodVars.get(methodName);
+  }
+
+  static void restoreVars(int i) {
+    for (int k=vars.size()-1; k > i; k--) {
+      vars.remove(k);
+    }
+  }
+    
+  
+  public static void main(String args []) throws ParseException
+  {
+    logo parser = new logo(System.in);
+	System.out.println("************** Reading from standard input **************");	
+	System.out.println(" Enter '!' to finish");
+	System.out.println(" Enter a logo expression: ");
+    while (true)
+    {
+      try
+      {
+        switch (logo.one_line())
+        {
+          case 0 : 
+          System.out.println("OK.");
+          break;
+          case 1 : 
+          System.out.println("Type '!' if you want to finish");
+          break;
+          case 2:
+          System.out.println("Finished by user");
+          System.exit(1);
+          default : 
+          break;
+        }
+      }
+      catch (Exception e)
+      {
+        System.out.println("NOK.");
+        System.out.println(e.getMessage());
+        logo.ReInit(System.in);
+      }
+      catch (Error e)
+      {
+        System.out.println("Oops.");
+        System.out.println(e.getMessage());
+        break;
+      }
+    }
+  }
+  
+}
+
+PARSER_END(logo)
+
+SKIP :
+{
+  " "
+| "\r"
+| "\t"
+| "\n"
+}
+
+TOKEN : /* COMMANDS */
+{
+  < #FORW : "forward" | "fd" >
+| < #BK : "back" | "bk" >
+| < #RT : "right" | "rt" >
+| < #LT : "left" | "lt" >
+| < #PUP : "penup"| "pu" >
+| < #PDW : "pendown"| "pd" >
+| < ARC : "arc" >
+| < #CLS : "clearscreen"| "cs" >
+| < REP : "repeat" >
+| < UNITARY_COMMAND: (< FORW > | < BK > | < RT > | < LT >) >
+| < EMPTY_COMMAND: (< PUP >|< PDW >| < CLS >) >
+}
+
+TOKEN : /* RESERVED WORDS */
+{
+  < TO : "to" >
+| < END: "end" >
+| < MAKE: "make" >
+}
+
+TOKEN : /* VARS */
+{
+  < #DIGIT : [ "0"-"9" ] >
+| < #LETTER: ["a"-"z", "A"-"Z"] >
+
+| < NUM: (< DIGIT >)+ >
+| < NAME: <LETTER> (<LETTER> | <DIGIT> | "_")* >
+}
+
+TOKEN : /* SYMBOLS */
+{
+  < COL: ":" >
+| < LSB: "[" >
+| < RSB: "]" >
+| < QUO: "\"" >
+}
+
+TOKEN : /* OPERATORS */
+{
+  < PLUS : "+" >
+| < MINUS : "-" >
+| < MULTIPLY : "*" >
+| < DIVIDE : "/" >
+}
+
+void varDef():
+{Token t;}
+{
+  < MAKE > < QUO >
+  t= < NAME > { defineVar(t.image.toLowerCase());}
+  < NUM > 
+}
+
+void methodCall():
+{ Token t;
+  int i; }
+{
+  t= < NAME >
+  {
+    if (!isMethodDefined(t.image.toLowerCase())) {
+       throw new ParseException("Method '" + t.image.toLowerCase() + "' is not defined.");
+       }
+    i= getMethodVars(t.image.toLowerCase()).size();
+   }
+
+   (checkVar() | < NUM >
+	{
+	  i--;
+	}
+   )*
+
+   {
+     if (i<0) {
+       throw new ParseException("Too many arguments for the method '"+t.image+"'");
+       }
+     if (i >0) {
+       throw new ParseException("Missing arguments in the method '"+t.image+"'");
+     }
+   }
+}
+
+void methodDef():
+{Token t;
+ Token var;
+ int i;}
+{
+  < TO >
+  t= < NAME >
+  {
+    defineMethod(t.image.toLowerCase());
+    i= vars.size()-1;
+  }
+
+  (
+    < COL > var= < NAME >
+	{
+	  addMethodVar(t.image.toLowerCase(), var.image.toLowerCase());
+	  defineVar(var.image.toLowerCase());
+	}
+      )*
+
+  ( checkCommand() | checkLoop() )*
+
+  {
+    if (vars.size()-1 >i) {
+      restoreVars(i);
+    }
+  }
+  
+  < END >
+}
+
+void checkVar():
+{Token t;}
+{
+   < COL >
+   t= < NAME >
+	{ 
+	   if (!isVarDefined(t.image.toLowerCase())) {
+	     throw new ParseException("Var '"+ t.image +"' not defined!");
+	   }
+	}
+}
+
+void checkParam():
+{ Token t;}
+{
+    checkVar()
+  | < NUM >
+}
+
+void checkCommand():
+{}
+{     < UNITARY_COMMAND > checkParam()
+ | < EMPTY_COMMAND > 
+ | methodCall()
+ | < ARC > checkParam() checkParam()
+  	  
+}
+
+void checkLoop():
+{ }
+{
+  < REP > (< NUM > | checkVar()) < LSB > 
+  (checkCommand()| checkLoop())*
+  < RSB >
+}
+
+int one_line() :
+{}
+{
+  (      varDef()
+	| methodDef()
+	| checkCommand()
+	| checkLoop()
+  )
+  {
+    return 0;
+  }
+| ";"
+  {
+    return 1;
+  }
+|  "!"
+	{
+	  return 2; }
+}

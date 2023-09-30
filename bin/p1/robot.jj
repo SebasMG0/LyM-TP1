@@ -1,0 +1,94 @@
+/**
+ * JavaCC template file created by SF JavaCC plugin 1.5.28+ wizard for JavaCC 1.5.0+
+ */
+options
+{
+  static = true;
+}
+
+PARSER_BEGIN(robot)
+package p1;
+
+public class robot
+{
+  public static void main(String args []) throws ParseException
+  {
+    robot parser = new robot(System.in);
+    while (true)
+    {
+      System.out.println("Reading from standard input...");
+      System.out.print("Enter an expression like \"1+(2+3)*4;\" :");
+      try
+      {
+        switch (robot.one_line())
+        {
+          case 0 : 
+          System.out.println("OK.");
+          break;
+          case 1 : 
+          System.out.println("Goodbye.");
+          break;
+          default : 
+          break;
+        }
+      }
+      catch (Exception e)
+      {
+        System.out.println("NOK.");
+        System.out.println(e.getMessage());
+        robot.ReInit(System.in);
+      }
+      catch (Error e)
+      {
+        System.out.println("Oops.");
+        System.out.println(e.getMessage());
+        break;
+      }
+    }
+  }
+}
+
+PARSER_END(robot)
+
+SKIP :
+{
+  " "
+| "\r"
+| "\t"
+| "\n"
+}
+
+TOKEN : /* VARS */
+{
+  < #DIGIT : [ "0"-"9" ] >
+| < #LETTER: ["a"-"z", "A"-"Z"] >
+
+| < NUM: (< DIGIT >)+ >
+| < NAME: <LETTER> (<LETTER> | <DIGIT> | "_")* >
+}
+
+TOKEN : /* SYMBOLS */
+{
+  < COL: ":" >
+| < COM: "," >
+| < SCN: ";" >
+| < LSB: "[" >
+| < RSB: "]" >
+| < LPA: "(" >
+| < RPA: ")" >
+| < LBR: "{" >
+| < RBR: "}" >
+}
+
+int one_line() :
+{}
+{
+   ";-"
+  {
+    return 0;
+  }
+| ";"
+  {
+    return 1;
+  }
+}
